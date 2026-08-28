@@ -1,0 +1,599 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const GaleriTakipSistemi());
+}
+
+class GaleriTakipSistemi extends StatefulWidget {
+  const GaleriTakipSistemi({super.key});
+
+  @override
+  State<GaleriTakipSistemi> createState() => _GaleriTakipSistemiState();
+}
+
+class _GaleriTakipSistemiState extends State<GaleriTakipSistemi> {
+  bool _karanlikModDurumu = false;
+  Color _anaUygulamaRengi = Colors.indigo;
+
+  void _karanlikModDegistir(bool deger) =>
+      setState(() => _karanlikModDurumu = deger);
+  void _temaRengiDegistir(Color yeniRenk) =>
+      setState(() => _anaUygulamaRengi = yeniRenk);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Galeri Takip Sistemi',
+      theme: ThemeData(
+        brightness: Brightness.light,
+        colorSchemeSeed: _anaUygulamaRengi,
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        colorSchemeSeed: _anaUygulamaRengi,
+        useMaterial3: true,
+      ),
+      themeMode: _karanlikModDurumu ? ThemeMode.dark : ThemeMode.light,
+      home: AnaEkran(
+        karanlikMod: _karanlikModDurumu,
+        seciliRenk: _anaUygulamaRengi,
+        onKaranlikModDegis: _karanlikModDegistir,
+        onRenkDegis: _temaRengiDegistir,
+      ),
+    );
+  }
+}
+
+class AnaEkran extends StatefulWidget {
+  final bool karanlikMod;
+  final Color seciliRenk;
+  final Function(bool) onKaranlikModDegis;
+  final Function(Color) onRenkDegis;
+
+  const AnaEkran({
+    super.key,
+    required this.karanlikMod,
+    required this.seciliRenk,
+    required this.onKaranlikModDegis,
+    required this.onRenkDegis,
+  });
+
+  @override
+  State<AnaEkran> createState() => _AnaEkranState();
+}
+
+class _AnaEkranState extends State<AnaEkran> {
+  int _seciliIndeks = 0;
+  String? _girisYapanKullanici;
+  int? _kullaniciYasi;
+  final List<Map<String, String>> _islemGecmisi = [];
+
+  final Map<String, Map<String, List<int>>> _aracVerisi = {
+    'Audi': {
+      'A1 Sportback': [1650000, 3],
+      'A3 Sedan': [2100000, 11],
+      'A4 Sedan': [3450000, 8],
+      'A5 Sportback': [3900000, 4],
+      'Q3': [2350000, 8],
+      'Q5': [3800000, 5],
+      'RS6': [14800000, 2],
+      'RS7': [19800000, 1],
+      'RS3': [11800000, 1],
+      'RS5': [13800000, 1],
+    },
+
+    'Mercedes': {
+      'C200': [1850000, 3],
+      'AMG GT63 S': [21000000, 1],
+      'C180': [1450000, 8],
+      'AMG GT43 S': [15000000, 1],
+    },
+
+    'BMW': {
+      '118i M Sport': [2050000, 4],
+      '218i Gran Coupe': [2250000, 1],
+      '320i M Sport': [3250000, 8],
+      '420i Coupe': [3600000, 12],
+      '520i Luxury': [4650000, 5],
+      'X1': [2500000, 5],
+      'M3': [8800000, 3],
+      'M4': [9800000, 3],
+      'M5': [20000000, 3],
+      '520d x drive': [2500000, 3],
+      '525d x drive': [1700000, 3],
+      'M2': [6800000, 3],
+    },
+    'Fiat': {
+      'Egea Sedan': [985000, 10],
+      'Egea Cross': [1050000, 10],
+      '500e': [1580000, 10],
+      'Panda': [920000, 10],
+      'Doblo': [1250000, 10],
+    },
+    'Ford': {
+      'Focus': [1480000, 3],
+      'Puma': [1680000, 7],
+      'Kuga': [2150000, 8],
+      'Fiesta': [1100000, 10],
+      'Ranger Raptor': [4900000, 6],
+    },
+    'Honda': {
+      'City': [1280000, 5],
+      'Civic Turbo': [1880000, 11],
+      'Jazz': [1550000, 4],
+      'CR-V': [3850000, 2],
+    },
+    'Tofaş': {
+      'Şahin': [285000, 10],
+      'Doğan SLX': [385000, 10],
+      'Kartal': [345000, 10],
+    },
+    'Togg': {
+      'T10X V1': [1432000, 9],
+      'T10F': [2150000, 5],
+    },
+  };
+
+  void _islemSureciniBaslat(
+    Map<String, String> islem,
+    String marka,
+    String model,
+  ) {
+    if (_girisYapanKullanici == null) {
+      _kayitEkraninaGit(islem, marka, model);
+    } else {
+      if (_kullaniciYasi! < 18) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hata: 18 yaşından küçükler işlem yapamaz!'),
+            backgroundColor: Colors.red,
+          ),
+        );
+
+        setState(() {
+          _girisYapanKullanici = null;
+          _kullaniciYasi = null;
+        });
+
+        return;
+      }
+
+      setState(() {
+        if (_aracVerisi[marka]![model]![1] > 0) {
+          _aracVerisi[marka]![model]![1] -= 1;
+          islem['kullanici'] = _girisYapanKullanici!;
+          islem['marka_anahtar'] = marka;
+          islem['model_anahtar'] = model;
+          _islemGecmisi.insert(0, islem);
+
+          _girisYapanKullanici = null;
+          _seciliIndeks = 1;
+        }
+      });
+    }
+  }
+
+  void _kayitEkraninaGit(
+    Map<String, String> bekleyenIslem,
+    String marka,
+    String model,
+  ) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => KayitEkrani(
+          seciliRenk: widget.seciliRenk,
+          onKayitTamam: (isim, yas) {
+            setState(() {
+              _girisYapanKullanici = isim;
+              _kullaniciYasi = yas;
+            });
+            Navigator.pop(context);
+            _islemSureciniBaslat(bekleyenIslem, marka, model);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _kayitSilVeIadeEt(int index) {
+    setState(() {
+      final silinenIslem = _islemGecmisi[index];
+      String? marka = silinenIslem['marka_anahtar'];
+      String? model = silinenIslem['model_anahtar'];
+
+      if (marka != null && model != null && _aracVerisi.containsKey(marka)) {
+        _aracVerisi[marka]![model]![1] += 1;
+      }
+
+      _islemGecmisi.removeAt(index);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('İşlem iptal edildi, stok 1 iade edildi.'),
+        ),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Galeri Takip Sistemi'),
+        centerTitle: true,
+        backgroundColor: widget.seciliRenk,
+        foregroundColor: Colors.white,
+      ),
+      body: [
+        AraclarEkrani(
+          aracVerisi: _aracVerisi,
+          onIslemYapildi: _islemSureciniBaslat,
+        ),
+        IstatistikEkrani(gecmis: _islemGecmisi, onSil: _kayitSilVeIadeEt),
+        AyarlarEkrani(
+          kullaniciAdi: _girisYapanKullanici,
+          karanlikMod: widget.karanlikMod,
+          seciliRenk: widget.seciliRenk,
+          onKaranlikModDegis: widget.onKaranlikModDegis,
+          onRenkDegis: widget.onRenkDegis,
+        ),
+      ][_seciliIndeks],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _seciliIndeks,
+        onTap: (index) => setState(() => _seciliIndeks = index),
+        selectedItemColor: widget.seciliRenk,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.directions_car),
+            label: 'Araçlar',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Geçmiş'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Ayarlar'),
+        ],
+      ),
+    );
+  }
+}
+
+class AraclarEkrani extends StatefulWidget {
+  final Map<String, Map<String, List<int>>> aracVerisi;
+  final Function(Map<String, String>, String, String) onIslemYapildi;
+  const AraclarEkrani({
+    super.key,
+    required this.aracVerisi,
+    required this.onIslemYapildi,
+  });
+
+  @override
+  State<AraclarEkrani> createState() => _AraclarEkraniState();
+}
+
+class _AraclarEkraniState extends State<AraclarEkrani> {
+  String? _seciliMarka;
+  String? _seciliModel;
+  int? _seciliYil;
+  DateTime _seciliTarih = DateTime.now();
+
+  String _f(int s) => s.toString().replaceAllMapped(
+    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+    (m) => '${m[1]}.',
+  );
+
+  int _toplamStok() {
+    int s = 0;
+    for (var m in widget.aracVerisi.values) {
+      for (var d in m.values) {
+        s += d[1];
+      }
+    }
+    return s;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    int? tabanFiyat = (_seciliMarka != null && _seciliModel != null)
+        ? widget.aracVerisi[_seciliMarka]![_seciliModel]![0]
+        : null;
+    int? stokAdedi = (_seciliMarka != null && _seciliModel != null)
+        ? widget.aracVerisi[_seciliMarka]![_seciliModel]![1]
+        : null;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Card(
+          color: Colors.indigo.withOpacity(0.1),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              'Güncel Toplam Stok: ${_toplamStok()} Adet',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        DropdownButtonFormField<String>(
+          decoration: const InputDecoration(
+            labelText: 'Marka Seçin',
+            border: OutlineInputBorder(),
+          ),
+          value: _seciliMarka,
+          items: (widget.aracVerisi.keys.toList()..sort())
+              .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+              .toList(),
+          onChanged: (v) => setState(() {
+            _seciliMarka = v;
+            _seciliModel = null;
+          }),
+        ),
+        const SizedBox(height: 12),
+        if (_seciliMarka != null)
+          DropdownButtonFormField<String>(
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Model Seçin',
+              border: OutlineInputBorder(),
+            ),
+            value: _seciliModel,
+            items: widget.aracVerisi[_seciliMarka]!.keys
+                .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                .toList(),
+            onChanged: (v) => setState(() => _seciliModel = v),
+          ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<int>(
+          decoration: const InputDecoration(
+            labelText: 'Model Yılı',
+            border: OutlineInputBorder(),
+          ),
+          value: _seciliYil,
+          items: List.generate(30, (i) => 2026 - i)
+              .map((y) => DropdownMenuItem(value: y, child: Text(y.toString())))
+              .toList(),
+          onChanged: (v) => setState(() => _seciliYil = v),
+        ),
+        const SizedBox(height: 15),
+        ListTile(
+          shape: RoundedRectangleBorder(
+            side: const BorderSide(color: Colors.grey),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          leading: const Icon(Icons.event),
+          title: const Text('İşlem Tarihi'),
+          subtitle: Text(
+            '${_seciliTarih.day}/${_seciliTarih.month}/${_seciliTarih.year}',
+          ),
+          onTap: () async {
+            final DateTime? p = await showDatePicker(
+              context: context,
+              initialDate: _seciliTarih,
+              firstDate: DateTime.now(),
+              lastDate: DateTime(2028),
+            );
+            if (p != null) setState(() => _seciliTarih = p);
+          },
+        ),
+        const Divider(height: 40),
+        if (_seciliModel != null && stokAdedi != null) ...[
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Text(
+                stokAdedi > 0
+                    ? '✅ Mevcut Stok: $stokAdedi adet kaldı.'
+                    : '❌ Stok tükendi!',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: stokAdedi > 0 ? Colors.green : Colors.red,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ),
+          if (stokAdedi > 0 && tabanFiyat != null && _seciliYil != null) ...[
+            _islemButonu('Satın Al', tabanFiyat, Colors.green, 'SATIS'),
+            const SizedBox(height: 12),
+            _islemButonu(
+              'Günlük Kiralama',
+              (tabanFiyat / 700).toInt(),
+              Colors.orange,
+              'KIRALAMA',
+            ),
+            const SizedBox(height: 8),
+            _islemButonu(
+              'Haftalık (%15 İndirim)',
+              ((tabanFiyat / 700) * 7 * 0.85).toInt(),
+              Colors.orange,
+              'KIRALAMA',
+            ),
+            const SizedBox(height: 8),
+            _islemButonu(
+              'Aylık (%30 İndirim)',
+              ((tabanFiyat / 700) * 30 * 0.70).toInt(),
+              Colors.orange,
+              'KIRALAMA',
+            ),
+          ],
+        ],
+      ],
+    );
+  }
+
+  Widget _islemButonu(String baslik, int fiyat, Color renk, String tur) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: renk,
+        foregroundColor: Colors.white,
+        minimumSize: const Size(double.infinity, 55),
+      ),
+      onPressed: () => widget.onIslemYapildi(
+        {
+          'tur': tur,
+          'arac': '$_seciliMarka $_seciliModel ($_seciliYil)',
+          'fiyat': '${_f(fiyat)} TL',
+          'detay': '$baslik | ${_seciliTarih.day}/${_seciliTarih.month}',
+        },
+        _seciliMarka!,
+        _seciliModel!,
+      ),
+      child: Text('$baslik: ${_f(fiyat)} TL'),
+    );
+  }
+}
+
+class IstatistikEkrani extends StatelessWidget {
+  final List<Map<String, String>> gecmis;
+  final Function(int) onSil;
+  const IstatistikEkrani({
+    super.key,
+    required this.gecmis,
+    required this.onSil,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return gecmis.isEmpty
+        ? const Center(child: Text('Henüz bir işlem kaydı yok.'))
+        : ListView.builder(
+            itemCount: gecmis.length,
+            itemBuilder: (context, i) {
+              final v = gecmis[i];
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: ListTile(
+                  leading: Icon(
+                    v['tur'] == 'SATIS' ? Icons.verified : Icons.key,
+                    color: Colors.indigo,
+                  ),
+                  title: Text(v['arac']!),
+                  subtitle: Text('Müşteri: ${v['kullanici']}\n${v['detay']}'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        v['fiyat']!,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => onSil(i),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+  }
+}
+
+class KayitEkrani extends StatefulWidget {
+  final Color seciliRenk;
+  final Function(String, int) onKayitTamam;
+  const KayitEkrani({
+    super.key,
+    required this.seciliRenk,
+    required this.onKayitTamam,
+  });
+
+  @override
+  State<KayitEkrani> createState() => _KayitEkraniState();
+}
+
+class _KayitEkraniState extends State<KayitEkrani> {
+  final TextEditingController _adC = TextEditingController();
+  final TextEditingController _yasC = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Müşteri Bilgileri')),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            TextField(
+              controller: _adC,
+              decoration: const InputDecoration(
+                labelText: 'Ad Soyad',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: _yasC,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Yaş',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 25),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: widget.seciliRenk,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              onPressed: () {
+                int? y = int.tryParse(_yasC.text);
+                if (_adC.text.isNotEmpty && y != null)
+                  widget.onKayitTamam(_adC.text, y);
+              },
+              child: const Text('Devam Et'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AyarlarEkrani extends StatelessWidget {
+  final String? kullaniciAdi;
+  final bool karanlikMod;
+  final Color seciliRenk;
+  final Function(bool) onKaranlikModDegis;
+  final Function(Color) onRenkDegis;
+
+  const AyarlarEkrani({
+    super.key,
+    this.kullaniciAdi,
+    required this.karanlikMod,
+    required this.seciliRenk,
+    required this.onKaranlikModDegis,
+    required this.onRenkDegis,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ListTile(title: const Text('Ekran Ayarları')),
+
+        const Divider(),
+        SwitchListTile(
+          title: const Text('Karanlık Mod'),
+          value: karanlikMod,
+          onChanged: onKaranlikModDegis,
+        ),
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children:
+              [Colors.indigo, Colors.teal, Colors.deepOrange, Colors.blueGrey]
+                  .map(
+                    (c) => IconButton(
+                      icon: Icon(Icons.circle, color: c, size: 35),
+                      onPressed: () => onRenkDegis(c),
+                    ),
+                  )
+                  .toList(),
+        ),
+      ],
+    );
+  }
+}
